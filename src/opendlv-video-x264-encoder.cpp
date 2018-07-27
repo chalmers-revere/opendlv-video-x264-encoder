@@ -81,15 +81,25 @@ int32_t main(int32_t argc, char **argv) {
                 return 1;
             }
 
-            // Allocate picture to pass YUV420 data into encoder.
+            // Initialize picture to pass YUV420 data into encoder.
             x264_picture_t picture_in;
-            if (0 != x264_picture_alloc(&picture_in, X264_CSP_I420, parameters.i_width, parameters.i_height)) {
-                std::cerr << "[opendlv-video-x264-encoder]: Failed to allocate picture frame x264." << std::endl;
-                return 1;
-            }
+            x264_picture_init(&picture_in);
             picture_in.i_type = X264_TYPE_AUTO;
             picture_in.img.i_csp = X264_CSP_I420;
-            // TODO: Avoid memcpy
+            picture_in.img.i_plane = HEIGHT;
+
+            // Directly point to the shared memory.
+            sharedMemory->lock();
+            {
+                picture_in.img.plane[0] = reinterpret_cast<uint8_t*>(sharedMemory->data());
+                picture_in.img.plane[1] = reinterpret_cast<uint8_t*>(sharedMemory->data() + (WIDTH * HEIGHT));
+                picture_in.img.plane[2] = reinterpret_cast<uint8_t*>(sharedMemory->data() + (WIDTH * HEIGHT + ((WIDTH * HEIGHT) >> 2)));
+                picture_in.img.i_stride[0] = WIDTH;
+                picture_in.img.i_stride[1] = WIDTH/2;
+                picture_in.img.i_stride[2] = WIDTH/2;
+                picture_in.img.i_stride[3] = 0;
+            }
+            sharedMemory->unlock();
 
             // Open h264 encoder.
             x264_t *encoder = x264_encoder_open(&parameters);
@@ -116,17 +126,6 @@ int32_t main(int32_t argc, char **argv) {
                     if (VERBOSE) {
                         before = cluon::time::now();
                     }
-
-                    {
-                        memcpy(picture_in.img.plane[0], sharedMemory->data(), (WIDTH * HEIGHT));
-                        memcpy(picture_in.img.plane[1], sharedMemory->data() + (WIDTH * HEIGHT), ((WIDTH * HEIGHT) >> 2));
-                        memcpy(picture_in.img.plane[2], sharedMemory->data() + (WIDTH * HEIGHT + ((WIDTH * HEIGHT) >> 2)), ((WIDTH * HEIGHT) >> 2));
-                        picture_in.img.i_stride[0] = WIDTH;
-                        picture_in.img.i_stride[1] = WIDTH/2;
-                        picture_in.img.i_stride[2] = WIDTH/2;
-                        picture_in.img.i_stride[3] = 0;
-                    }
-
                     x264_nal_t *nals{nullptr};
                     int i_nals{0};
                     picture_in.i_pts = i_frame++;
@@ -149,7 +148,6 @@ int32_t main(int32_t argc, char **argv) {
             }
 
             x264_encoder_close(encoder);
-            x264_picture_clean(&picture_in);
             retCode = 0;
         }
         else {
