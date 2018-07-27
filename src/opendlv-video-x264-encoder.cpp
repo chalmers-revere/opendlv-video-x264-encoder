@@ -61,7 +61,7 @@ int32_t main(int32_t argc, char **argv) {
             // Configure x264 parameters.
             x264_param_t parameters;
             if (0 != x264_param_default_preset(&parameters, "veryfast", "zerolatency")) {
-                std::cerr << "[opendlv-video-x264-encoder]:Failed to load preset parameters for x264." << std::endl;
+                std::cerr << "[opendlv-video-x264-encoder]: Failed to load preset parameters for x264." << std::endl;
                 return 1;
             }
             parameters.i_log_level = (VERBOSE ? X264_LOG_INFO : X264_LOG_NONE   );
@@ -144,6 +144,10 @@ int32_t main(int32_t argc, char **argv) {
                     opendlv::proxy::ImageReading ir;
                     ir.format("h264").width(WIDTH).height(HEIGHT).data(data);
                     od4.send(ir, sampleTimeStamp, ID);
+
+                    if (VERBOSE) {
+                        std::clog << "[opendlv-video-x264-encoder]:Frame size = " << data.size() << " bytes; encoding took " << cluon::time::deltaInMicroseconds(after, before) << " microseconds." << std::endl;
+                    }
                 }
             }
 
