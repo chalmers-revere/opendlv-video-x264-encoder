@@ -142,7 +142,7 @@ int32_t main(int32_t argc, char **argv) {
 
                 if (!data.empty()) {
                     opendlv::proxy::ImageReading ir;
-                    ir.format("h264").width(WIDTH).height(HEIGHT).data(data);
+                    ir.fourcc("h264").width(WIDTH).height(HEIGHT).data(data);
                     od4.send(ir, sampleTimeStamp, ID);
 
                     if (VERBOSE) {
