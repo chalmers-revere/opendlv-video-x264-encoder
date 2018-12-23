@@ -123,6 +123,11 @@ int32_t main(int32_t argc, char **argv) {
                 std::string data;
                 sharedMemory->lock();
                 {
+                    // Read notification timestamp.
+                    auto r = sharedMemory->getTimeStamp();
+                    sampleTimeStamp = (r.first ? r.second : sampleTimeStamp);
+                }
+                {
                     if (VERBOSE) {
                         before = cluon::time::now();
                     }
@@ -146,7 +151,7 @@ int32_t main(int32_t argc, char **argv) {
                     od4.send(ir, sampleTimeStamp, ID);
 
                     if (VERBOSE) {
-                        std::clog << "[opendlv-video-x264-encoder]:Frame size = " << data.size() << " bytes; encoding took " << cluon::time::deltaInMicroseconds(after, before) << " microseconds." << std::endl;
+                        std::clog << "[opendlv-video-x264-encoder]: Frame size = " << data.size() << " bytes; sample time = " << cluon::time::toMicroseconds(sampleTimeStamp) << " microseconds; encoding took " << cluon::time::deltaInMicroseconds(after, before) << " microseconds." << std::endl;
                     }
                 }
             }
