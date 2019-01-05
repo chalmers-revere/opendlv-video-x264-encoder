@@ -69,7 +69,9 @@ int32_t main(int32_t argc, char **argv) {
                 return 1;
             }
             if (LOSSLESS) {
+                parameters.rc.i_rc_method = X264_RC_CRF;
                 parameters.rc.i_qp_constant = 0;
+                parameters.rc.f_rf_constant_max = 0;
             }
             parameters.i_log_level = (VERBOSE ? X264_LOG_INFO : X264_LOG_NONE);
             parameters.i_threads = 1;
