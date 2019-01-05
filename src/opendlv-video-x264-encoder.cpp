@@ -35,14 +35,16 @@ int32_t main(int32_t argc, char **argv) {
          (0 == commandlineArguments.count("width")) ||
          (0 == commandlineArguments.count("height")) ) {
         std::cerr << argv[0] << " attaches to an I420-formatted image residing in a shared memory area to convert it into a corresponding h264 frame for publishing to a running OD4 session." << std::endl;
-        std::cerr << "Usage:   " << argv[0] << " --cid=<OpenDaVINCI session> --name=<name of shared memory area> --width=<width> --height=<height> [--gop=<GOP>] [--verbose] [--id=<identifier in case of multiple instances]" << std::endl;
-        std::cerr << "         --cid:     CID of the OD4Session to send h264 frames" << std::endl;
-        std::cerr << "         --id:      when using several instances, this identifier is used as senderStamp" << std::endl;
-        std::cerr << "         --name:    name of the shared memory area to attach" << std::endl;
-        std::cerr << "         --width:   width of the frame" << std::endl;
-        std::cerr << "         --height:  height of the frame" << std::endl;
-        std::cerr << "         --gop:     optional: length of group of pictures (default = 10)" << std::endl;
-        std::cerr << "         --verbose: print encoding information" << std::endl;
+        std::cerr << "Usage:   " << argv[0] << " --cid=<OpenDaVINCI session> --name=<name of shared memory area> --width=<width> --height=<height> [--gop=<GOP>] [--lossless] [--preset=X] [--verbose] [--id=<identifier in case of multiple instances]" << std::endl;
+        std::cerr << "         --cid:      CID of the OD4Session to send h264 frames" << std::endl;
+        std::cerr << "         --id:       when using several instances, this identifier is used as senderStamp" << std::endl;
+        std::cerr << "         --name:     name of the shared memory area to attach" << std::endl;
+        std::cerr << "         --width:    width of the frame" << std::endl;
+        std::cerr << "         --height:   height of the frame" << std::endl;
+        std::cerr << "         --gop:      optional: length of group of pictures (default = 10)" << std::endl;
+        std::cerr << "         --lossless: if set use lossless encoding" << std::endl;
+        std::cerr << "         --preset:   one of x264's presets: ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow; default: veryfast" << std::endl;
+        std::cerr << "         --verbose:  print encoding information" << std::endl;
         std::cerr << "Example: " << argv[0] << " --cid=111 --name=data --width=640 --height=480 --verbose" << std::endl;
     }
     else {
@@ -51,6 +53,8 @@ int32_t main(int32_t argc, char **argv) {
         const uint32_t HEIGHT{static_cast<uint32_t>(std::stoi(commandlineArguments["height"]))};
         const uint32_t GOP_DEFAULT{10};
         const uint32_t GOP{(commandlineArguments["gop"].size() != 0) ? static_cast<uint32_t>(std::stoi(commandlineArguments["gop"])) : GOP_DEFAULT};
+        const bool LOSSLESS{commandlineArguments.count("lossless") != 0};
+        const std::string PRESET{(commandlineArguments["preset"].size() != 0) ? commandlineArguments["preset"] : "veryfast"};
         const bool VERBOSE{commandlineArguments.count("verbose") != 0};
         const uint32_t ID{(commandlineArguments["id"].size() != 0) ? static_cast<uint32_t>(std::stoi(commandlineArguments["id"])) : 0};
 
@@ -60,11 +64,14 @@ int32_t main(int32_t argc, char **argv) {
 
             // Configure x264 parameters.
             x264_param_t parameters;
-            if (0 != x264_param_default_preset(&parameters, "veryfast", "zerolatency")) {
-                std::cerr << "[opendlv-video-x264-encoder]: Failed to load preset parameters for x264." << std::endl;
+            if (0 != x264_param_default_preset(&parameters, PRESET.c_str(), "zerolatency")) {
+                std::cerr << "[opendlv-video-x264-encoder]: Failed to load preset parameters (" << PRESET << ") for x264." << std::endl;
                 return 1;
             }
-            parameters.i_log_level = (VERBOSE ? X264_LOG_INFO : X264_LOG_NONE   );
+            if (LOSSLESS) {
+                parameters.rc.i_qp_constant = 0;
+            }
+            parameters.i_log_level = (VERBOSE ? X264_LOG_INFO : X264_LOG_NONE);
             parameters.i_threads = 1;
             parameters.i_bitdepth = 8;
             parameters.i_keyint_min = GOP;
