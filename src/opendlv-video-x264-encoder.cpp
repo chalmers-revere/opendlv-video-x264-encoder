@@ -64,29 +64,27 @@ int32_t main(int32_t argc, char **argv) {
 
             // Configure x264 parameters.
             x264_param_t parameters;
-            if (0 != x264_param_default_preset(&parameters, PRESET.c_str(), (!LOSSLESS ? "zerolatency" : NULL))) {
+            if (0 != x264_param_default_preset(&parameters, PRESET.c_str(), (!LOSSLESS ? "zerolatency" : "fastdecode"))) {
                 std::cerr << "[opendlv-video-x264-encoder]: Failed to load preset parameters (" << PRESET << ") for x264." << std::endl;
                 return 1;
             }
             parameters.i_width  = WIDTH;
             parameters.i_height = HEIGHT;
             parameters.i_log_level = (VERBOSE ? X264_LOG_INFO : X264_LOG_NONE);
-//            parameters.i_csp = X264_CSP_I420;
+            parameters.i_csp = X264_CSP_I420;
             if (LOSSLESS) {
-                parameters.rc.i_rc_method = X264_RC_CRF;
+                parameters.rc.i_rc_method = X264_RC_CQP;
                 parameters.rc.i_qp_constant = 0;
                 parameters.rc.f_rf_constant_max = 0;
             }
-            else {
-                parameters.i_bitdepth = 8;
-                parameters.i_threads = 1;
-                parameters.i_keyint_min = GOP;
-                parameters.i_keyint_max = GOP;
-                parameters.i_fps_num = 20 /* implicitly derived from SharedMemory notifications */;
-                parameters.b_vfr_input = 0;
-                parameters.b_repeat_headers = 1;
-                parameters.b_annexb = 1;
-            }
+            parameters.i_bitdepth = 8;
+            parameters.i_threads = 1;
+            parameters.i_keyint_min = GOP;
+            parameters.i_keyint_max = GOP;
+            parameters.i_fps_num = 20 /* implicitly derived from SharedMemory notifications */;
+            parameters.b_vfr_input = 0;
+            parameters.b_repeat_headers = 1;
+            parameters.b_annexb = 1;
             if (0 != x264_param_apply_profile(&parameters, (!LOSSLESS ? "baseline" : "high444"))) {
                 std::cerr << "[opendlv-video-x264-encoder]:Failed to apply parameters for x264." << std::endl;
                 return 1;
@@ -154,22 +152,6 @@ int32_t main(int32_t argc, char **argv) {
                         after = cluon::time::now();
                     }
                 }
-if (i_frame == 10) {
-{
-    std::fstream fout("raw.yuv", std::ios::out|std::ios::binary|std::ios::trunc);
-    if (fout.good()) {
-        fout.write(reinterpret_cast<char*>(sharedMemory->data()), sharedMemory->size());
-    }
-    fout.close();
-}
-{
-    std::fstream fout("raw.h264", std::ios::out|std::ios::binary|std::ios::trunc);
-    if (fout.good()) {
-        fout.write(data.c_str(), data.size());
-    }
-    fout.close();
-}
-}
                 sharedMemory->unlock();
 
                 if (!data.empty()) {
